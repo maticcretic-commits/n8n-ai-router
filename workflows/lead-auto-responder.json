@@ -1,0 +1,136 @@
+{
+  "name": "Lead Auto-Responder (Free)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "new-lead",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "e68fa228-43f7-4ae5-9e4f-bd16af56192e",
+      "name": "New Lead Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        240,
+        300
+      ],
+      "webhookId": "296bc4b4-ea4b-47d6-af9d-67ae8bfa2e02"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://openrouter.ai/api/v1/chat/completions",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.OPENROUTER_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "HTTP-Referer",
+              "value": "https://github.com/maticcretic-commits/n8n-ai-router"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\"model\": \"meta-llama/llama-3.3-70b-instruct:free\", \"messages\": [{\"role\": \"system\", \"content\": \"You draft short, warm, professional first replies to new business leads. Keep it under 120 words, end with one clear question. Never invent prices or promises.\"}, {\"role\": \"user\", \"content\": ($json.body?.name ? 'Lead name: ' + $json.body.name + '. ' : '') + ($json.body?.interest ? 'Interested in: ' + $json.body.interest + '. ' : '') + ($json.body?.message ? 'Their message: ' + $json.body.message : 'Draft a first reply.')}]}) }}",
+        "options": {
+          "timeout": 120000,
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "f6de124f-8b36-4cb7-9b1a-62cf264c44c9",
+      "name": "Draft Reply",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        460,
+        300
+      ],
+      "notes": ""
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const d = $input.first().json.choices?.[0]?.message?.content || 'Draft unavailable.';\nconst lead = $('New Lead Webhook').first().json.body || {};\nreturn [{ json: { text: '\ud83c\udd95 New lead: ' + (lead.name || 'unknown') + '\\n\\nDraft reply:\\n' + d + '\\n\\n_Approve manually before sending._' } }];"
+      },
+      "id": "dd74767c-a272-4938-8087-8eceba5b5443",
+      "name": "Prepare Approval Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        680,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.TELEGRAM_CHAT_ID }}",
+        "text": "={{ $json.text }}",
+        "additionalFields": {}
+      },
+      "id": "fdd11ba4-e577-4a8e-a30d-5336c47a6820",
+      "name": "Notify on Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        900,
+        300
+      ],
+      "notes": "Create a free bot via @BotFather, add its credential here, set TELEGRAM_CHAT_ID env var."
+    }
+  ],
+  "connections": {
+    "New Lead Webhook": {
+      "main": [
+        [
+          {
+            "node": "Draft Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Draft Reply": {
+      "main": [
+        [
+          {
+            "node": "Prepare Approval Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Approval Message": {
+      "main": [
+        [
+          {
+            "node": "Notify on Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}
