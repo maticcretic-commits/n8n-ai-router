@@ -1,6 +1,6 @@
 # n8n AI Router 🤖 — Best of All
 
-> **Best of All — one router, every free AI model, always the best answer for the task.**
+> **Best of All — one free router that sends every task to the best AI for the job.**
 
 One trigger in, the **best free AI for the job** out. This repo gives you 4 importable
 n8n workflows that route work across multiple free AI models automatically —
