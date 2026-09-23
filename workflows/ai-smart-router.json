@@ -1,0 +1,528 @@
+{
+  "name": "AI Smart Router (Free)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ai-route",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "2c2f1181-b2dc-4691-a8ab-acb9b8260337",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        240,
+        300
+      ],
+      "webhookId": "c0414f36-cc54-4b23-a4e1-bfd8df66a36e"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const b = $input.first().json.body || $input.first().json;\nreturn [{ json: { task: (b.task || 'quick-qa').toLowerCase(), text: b.text || '' } }];"
+      },
+      "id": "ba8b1d35-5058-4151-880a-c2af00d91fc5",
+      "name": "Normalize Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://openrouter.ai/api/v1/chat/completions",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.OPENROUTER_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "HTTP-Referer",
+              "value": "https://github.com/maticcretic-commits/n8n-ai-router"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\"model\": \"deepseek/deepseek-chat-v3-0324:free\", \"messages\": [{\"role\": \"system\", \"content\": \"You are an intent classifier. Reply with ONLY valid JSON like {\\\"lane\\\": \\\"code\\\"}. Lanes: code (programming, debugging, scripts), writing (emails, blogs, copy), research (analysis, comparisons, deep questions), quick-qa (everything else).\"}, {\"role\": \"user\", \"content\": $json.text}]}) }}",
+        "options": {
+          "timeout": 120000,
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "3baf72bf-b161-4ab9-86e3-8ba9e044c4ba",
+      "name": "Classify Intent",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        680,
+        300
+      ],
+      "notes": "Free classifier. Swap the model id any time at openrouter.ai/models."
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const raw = $input.first().json.choices?.[0]?.message?.content || '{}';\nconst prev = $('Normalize Input').first().json;\nlet lane = 'quick-qa';\ntry { const m = raw.match(/\\{[\\s\\S]*\\}/); if (m) lane = (JSON.parse(m[0]).lane || lane).toLowerCase(); } catch (e) {}\nif (!['code','writing','research','quick-qa'].includes(lane)) lane = 'quick-qa';\nreturn [{ json: { lane, task: prev.task, text: prev.text } }];"
+      },
+      "id": "80738b34-9fb0-4378-9bf0-aae04c782212",
+      "name": "Parse Lane",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        900,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose"
+                },
+                "conditions": [
+                  {
+                    "id": "fc81e042-f274-4878-913a-f10a6c1d6976",
+                    "leftValue": "={{ $json.lane }}",
+                    "rightValue": "code",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.string.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "code"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose"
+                },
+                "conditions": [
+                  {
+                    "id": "d509c405-6825-49ac-8af5-70f8def4ff89",
+                    "leftValue": "={{ $json.lane }}",
+                    "rightValue": "writing",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.string.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "writing"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose"
+                },
+                "conditions": [
+                  {
+                    "id": "4aaa2a52-854c-4522-94d4-68e778d3d202",
+                    "leftValue": "={{ $json.lane }}",
+                    "rightValue": "research",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.string.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "research"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose"
+                },
+                "conditions": [
+                  {
+                    "id": "40ab4ab1-3fe0-463d-931d-d02f05279db8",
+                    "leftValue": "={{ $json.lane }}",
+                    "rightValue": "quick-qa",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.string.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "quick-qa"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra",
+          "renameOnMatch": true
+        }
+      },
+      "id": "77adbb94-36a4-43c3-8e69-bd7050aeb8d8",
+      "name": "Route by Lane",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        1120,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ {\"lane\": $('Parse Lane').first().json.lane, \"answer\": $json.choices[0].message.content} }}",
+        "options": {}
+      },
+      "id": "e8d9c673-c42f-4267-b743-9064be8fc66e",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1560,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://openrouter.ai/api/v1/chat/completions",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.OPENROUTER_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "HTTP-Referer",
+              "value": "https://github.com/maticcretic-commits/n8n-ai-router"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\"model\": \"qwen/qwen3-coder:free\", \"messages\": [{\"role\": \"system\", \"content\": \"You are a senior software engineer. Return clean, working code with brief explanations.\"}, {\"role\": \"user\", \"content\": $('Parse Lane').first().json.text}]}) }}",
+        "options": {
+          "timeout": 120000,
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "20badc69-8df7-4b1b-bc4b-940dc1502aca",
+      "name": "Code Lane",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1340,
+        120
+      ],
+      "notes": "Free lane model. Change the id to any other :free model."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://openrouter.ai/api/v1/chat/completions",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.OPENROUTER_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "HTTP-Referer",
+              "value": "https://github.com/maticcretic-commits/n8n-ai-router"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\"model\": \"meta-llama/llama-3.3-70b-instruct:free\", \"messages\": [{\"role\": \"system\", \"content\": \"You are a professional copywriter. Write clearly, warmly and concisely.\"}, {\"role\": \"user\", \"content\": $('Parse Lane').first().json.text}]}) }}",
+        "options": {
+          "timeout": 120000,
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "acafe1a8-6fed-4b9f-9fb9-ca13167f2f30",
+      "name": "Writing Lane",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1340,
+        300
+      ],
+      "notes": "Free lane model. Change the id to any other :free model."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://openrouter.ai/api/v1/chat/completions",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.OPENROUTER_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "HTTP-Referer",
+              "value": "https://github.com/maticcretic-commits/n8n-ai-router"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\"model\": \"deepseek/deepseek-r1:free\", \"messages\": [{\"role\": \"system\", \"content\": \"You are a research analyst. Think step by step, then give a structured, thorough answer.\"}, {\"role\": \"user\", \"content\": $('Parse Lane').first().json.text}]}) }}",
+        "options": {
+          "timeout": 120000,
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "3f121008-fe0d-4647-86f1-51051742b2cc",
+      "name": "Research Lane",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1340,
+        480
+      ],
+      "notes": "Free lane model. Change the id to any other :free model."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://openrouter.ai/api/v1/chat/completions",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.OPENROUTER_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "HTTP-Referer",
+              "value": "https://github.com/maticcretic-commits/n8n-ai-router"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\"model\": \"google/gemma-3-27b-it:free\", \"messages\": [{\"role\": \"system\", \"content\": \"You are a helpful assistant. Answer briefly and directly.\"}, {\"role\": \"user\", \"content\": $('Parse Lane').first().json.text}]}) }}",
+        "options": {
+          "timeout": 120000,
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "6cd32f53-7998-4ccf-a8a5-064101b7f204",
+      "name": "Quick QA Lane",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1340,
+        660
+      ],
+      "notes": "Free lane model. Change the id to any other :free model."
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Normalize Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Input": {
+      "main": [
+        [
+          {
+            "node": "Classify Intent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Classify Intent": {
+      "main": [
+        [
+          {
+            "node": "Parse Lane",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Lane": {
+      "main": [
+        [
+          {
+            "node": "Route by Lane",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route by Lane": {
+      "main": [
+        [
+          {
+            "node": "Code Lane",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Writing Lane",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Research Lane",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Quick QA Lane",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code Lane": {
+      "main": [
+        [
+          {
+            "node": "Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Writing Lane": {
+      "main": [
+        [
+          {
+            "node": "Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Research Lane": {
+      "main": [
+        [
+          {
+            "node": "Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Quick QA Lane": {
+      "main": [
+        [
+          {
+            "node": "Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}
