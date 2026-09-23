@@ -1,0 +1,141 @@
+{
+  "name": "Autonomous Morning Brief (Free)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "cronExpression": "0 7 * * *"
+            }
+          ]
+        }
+      },
+      "id": "2493a4e8-3975-4f9f-bfd4-098e9d735215",
+      "name": "Every Morning 7am",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://openrouter.ai/api/v1/chat/completions",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.OPENROUTER_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "HTTP-Referer",
+              "value": "https://github.com/maticcretic-commits/n8n-ai-router"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\"model\": \"deepseek/deepseek-chat-v3-0324:free\", \"messages\": [{\"role\": \"system\", \"content\": \"You are a personal briefing assistant. Write a concise morning brief with sections: Top 3 tech/AI headlines (say these are illustrative unless browsing is enabled), One productivity tip, Today's focus suggestion. Keep it under 250 words. Use markdown.\"}, {\"role\": \"user\", \"content\": \"Good morning! Today is \" + new Date().toDateString() + \". Write my morning brief.\"}]}) }}",
+        "options": {
+          "timeout": 120000,
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "9d4699a1-6f73-49f7-aa86-1b43666f30ee",
+      "name": "Write Morning Brief",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        460,
+        300
+      ],
+      "notes": ""
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const body = $input.first().json.choices?.[0]?.message?.content || 'Brief unavailable.';\nreturn [{ json: { subject: '\u2600\ufe0f Your Morning Brief \u2014 ' + new Date().toDateString(), body } }];"
+      },
+      "id": "8ab8b6b8-343f-4532-98ad-0f16a5906fdc",
+      "name": "Format Email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        680,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "subject": "={{ $json.subject }}",
+        "emailBody": "={{ $json.body }}",
+        "options": {}
+      },
+      "id": "f6e226f7-ee17-46f6-8ea8-f414770ac2f9",
+      "name": "Send via Gmail",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        900,
+        300
+      ],
+      "notes": "Add your free Gmail OAuth2 credential after import (n8n prompts you)."
+    }
+  ],
+  "connections": {
+    "Every Morning 7am": {
+      "main": [
+        [
+          {
+            "node": "Write Morning Brief",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write Morning Brief": {
+      "main": [
+        [
+          {
+            "node": "Format Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Email": {
+      "main": [
+        [
+          {
+            "node": "Send via Gmail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}
