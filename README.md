@@ -1,6 +1,6 @@
-# n8n AI Router 🤖 — Best of All
+# n8n AI Router 🤖 — One Router to Run Them All
 
-> **Best of All — one free router that sends every task to the best AI for the job.**
+> **One router to run them all — every free AI model, auto-routed to the task it does best. Cost: ₹0.**
 
 One trigger in, the **best free AI for the job** out. This repo gives you 4 importable
 n8n workflows that route work across multiple free AI models automatically —
