@@ -1,0 +1,162 @@
+{
+  "name": "Content Pipeline (Free)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "cronExpression": "0 9 * * *"
+            }
+          ]
+        }
+      },
+      "id": "fcc1dc16-1f51-449e-be66-811f7d9ad38c",
+      "name": "Daily Content 9am",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const topics = ['How AI automation saves small businesses 10 hours a week',\n 'n8n vs Zapier: when free and open wins',\n '5 free AI models you can use today (no credit card)',\n 'A beginner\\'s checklist before automating anything',\n 'How I built a GIS web app with free tools only'];\nconst day = Math.floor(Date.now() / 86400000);\nreturn [{ json: { topic: topics[day % topics.length] } }];"
+      },
+      "id": "82ebb031-4c82-4e41-8136-5cde37f074a6",
+      "name": "Pick Today's Topic",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://openrouter.ai/api/v1/chat/completions",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.OPENROUTER_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "HTTP-Referer",
+              "value": "https://github.com/maticcretic-commits/n8n-ai-router"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\"model\": \"meta-llama/llama-3.3-70b-instruct:free\", \"messages\": [{\"role\": \"system\", \"content\": \"You are a social media ghostwriter. Write one engaging LinkedIn-style post (120-180 words), with a hook first line and 3 hashtags at the end. Plain text, no markdown headers.\"}, {\"role\": \"user\", \"content\": $json.topic}]}) }}",
+        "options": {
+          "timeout": 120000,
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "008f0d8a-17ab-44b4-88f3-50128d0c0a91",
+      "name": "Generate Post Draft",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        680,
+        300
+      ],
+      "notes": ""
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const post = $input.first().json.choices?.[0]?.message?.content || 'Draft unavailable.';\nconst topic = $('Pick Today\\'s Topic').first().json.topic;\nconst md = '# ' + topic + '\\n\\n_Date: ' + new Date().toISOString().slice(0,10) + '_\\n\\n' + post + '\\n';\nreturn [{ json: { filename: '/home/node/drafts/post-' + new Date().toISOString().slice(0,10) + '.md', content: md } }];"
+      },
+      "id": "a23ac931-68b8-4a48-a614-4dbcf23bb291",
+      "name": "Build Markdown File",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        900,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "command": "=mkdir -p /home/node/drafts && cat > \"{{ $json.filename }}\" << 'EOF'\n{{ $json.content }}\nEOF\necho \"saved\""
+      },
+      "id": "81da6567-9426-432e-8f51-2d9e6643b69c",
+      "name": "Save Draft to File",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        1120,
+        300
+      ],
+      "notes": "Writes the draft as a markdown file inside the n8n container/host."
+    }
+  ],
+  "connections": {
+    "Daily Content 9am": {
+      "main": [
+        [
+          {
+            "node": "Pick Today's Topic",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pick Today's Topic": {
+      "main": [
+        [
+          {
+            "node": "Generate Post Draft",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Post Draft": {
+      "main": [
+        [
+          {
+            "node": "Build Markdown File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Markdown File": {
+      "main": [
+        [
+          {
+            "node": "Save Draft to File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}
