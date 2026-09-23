@@ -111,3 +111,6 @@ n8n will prompt you for any missing credentials (see per-workflow notes below).
 ## License
 
 MIT — use it, fork it, sell services built on it.
+
+## ☕ Support my work
+If this project was useful, you can support it with Bitcoin: `bc1q6q75k8zjxvw7w02lmdprpy6xx6qk4lzz2rmvay`
