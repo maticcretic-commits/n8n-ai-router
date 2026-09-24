@@ -1,5 +1,10 @@
 # n8n AI Router 🤖 — One Router to Run Them All
 
+[![GitHub stars](https://img.shields.io/github/stars/maticcretic-commits/n8n-ai-router?style=social)](https://github.com/maticcretic-commits/n8n-ai-router/stargazers)
+[![Last commit](https://img.shields.io/github/last-commit/maticcretic-commits/n8n-ai-router)](https://github.com/maticcretic-commits/n8n-ai-router/commits/main)
+[![Cost: Free](https://img.shields.io/badge/cost-%E2%82%B90-brightgreen)](https://github.com/maticcretic-commits/n8n-ai-router)
+
+
 > **One router to run them all — every free AI model, auto-routed to the task it does best. Cost: ₹0.**
 
 One trigger in, the **best free AI for the job** out. This repo gives you 4 importable
